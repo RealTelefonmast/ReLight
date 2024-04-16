@@ -1,0 +1,19 @@
+﻿#pragma kernel DrawAgentMap
+
+struct Agent {
+	float2 position;
+	float angle;
+	float4 mask;
+	int speciesIndex;
+	
+};
+
+RWStructuredBuffer<float4> colors;
+
+RWTexture2D<float4> TargetTexture;
+
+[numthreads(16,1,1)]
+void DrawAgentMap (uint3 id : SV_DispatchThreadID)
+{
+
+}

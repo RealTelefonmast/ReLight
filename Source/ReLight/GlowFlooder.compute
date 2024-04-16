@@ -1,0 +1,142 @@
+﻿#pragma kernel CSMain
+
+struct GlowFloodCell
+{
+    int intDist;
+    uint status;
+};
+
+struct GlowerSource
+{
+    uint index;
+    uint active;
+    float radius;
+    float overlightRadius;
+    float4 color;
+};
+
+RWTexture2D<float4> Result;
+
+//Final
+RWStructuredBuffer<float4> glowGrid;
+
+//Glow Data
+StructuredBuffer<GlowerSource> glowSources;
+
+//Metadata
+StructuredBuffer<float> gameGlowGrid;
+StructuredBuffer<uint> blockerGrid;
+//StructuredBuffer<GlowFloodCell> calcGrid;
+
+uint3 MAP_SIZE;
+uint LENGTH;
+
+//GlowerSource curGlower;
+
+//Misc
+uint statusUnseenValue;
+uint statusOpenValue = 1U;
+uint statusFinalizedValue = 1U;
+
+float attenLinearSlope;
+
+int CellToIndex(int3 v)
+{
+    return v.z * MAP_SIZE.x + v.x;
+}
+
+uint3 IndexToCell(uint i)
+{
+    return uint3(i % MAP_SIZE.x, 0, i / MAP_SIZE.z);
+}
+
+/*
+void InitStatusesAndPushStartNode(inout int curIndex, uint3 start)
+{
+    statusUnseenValue += 3U;
+    statusOpenValue += 3U;
+    statusFinalizedValue += 3U;
+    curIndex = CellToIndex(start);
+    //calcGrid[curGlower].intDist = 100;
+}
+
+void SetGlowGridFromDist(int index)
+{
+    float num = calcGrid[index].intDist / 100;
+    float4 color;
+    if(num < curGlower.radius)
+    {
+        float b = 1.0/(num*num);
+        float b2 = lerp(1.0 + attenLinearSlope * num, b, 0.4f);
+        color = curGlower.color * b2;
+        color.a = 0;
+    }
+    if(color.r > 0 || color.g > 0 || color.b > 0)
+    {
+        float4 colA = glowGrid[index];
+        colA += color;
+        if(num < curGlower.overlightRadius)
+        {
+            colA.a = 1;
+        }
+        glowGrid[index] = colA;
+    }
+}
+
+void FloodGlowFor(uint3 cell, uint index)
+{
+    attenLinearSlope = -1.0/curGlower.radius;
+    uint3 position = curGlower.position;
+    uint num = round(curGlower.glowRadius * 100);
+    uint index = CellToIndex(position);
+    InitStatusesAndPushStartNode(index, position);
+    
+}
+*/
+
+float LengthHorizontal(uint3 vec)
+{
+    return sqrt((float)(vec.x * vec.x + vec.z * vec.z));
+}
+
+float DistanceBetween(uint3 cell1, uint3 cell2)
+{
+    return LengthHorizontal(cell1 - cell2);
+}
+
+float4 SetGlowAt(uint3 cell, uint index)
+{
+    if(blockerGrid[index]) return 0;
+
+    //Look at all glowsources
+    for(uint i = 0; i < LENGTH; i++)
+    {
+        GlowerSource source = glowSources[i];
+        if(!source.active) continue;
+        attenLinearSlope = -1.0 / source.radius;
+        float curDistance = DistanceBetween(cell, IndexToCell(i));
+        if(curDistance > source.radius) continue;
+        float b = 1.0 / (curDistance * curDistance);
+        float b2 = lerp(1.0 + attenLinearSlope * curDistance, b, 0.4f);
+        float4 color = source.color * b2;
+        if(color.r > 0 || color.g > 0 || color.b > 0)
+        {
+            color = clamp(0.0f, 1.0f, color);
+            color += glowGrid[index];
+            if(curDistance < source.overlightRadius)
+            {
+                color.a = 1.0;
+            }
+            glowGrid[index] = color;
+        }
+    }
+    return glowGrid[index]; 
+}
+
+[numthreads(1024,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    glowGrid[id.x] = 0;
+    Result[id.xy] = SetGlowAt(IndexToCell(id.x), id.x);
+    return;
+}
