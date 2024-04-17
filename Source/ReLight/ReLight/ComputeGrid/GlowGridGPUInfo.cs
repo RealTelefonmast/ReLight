@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TeleCore;
 using UnityEngine;
 using Verse;
 
@@ -50,7 +49,7 @@ namespace ReLight
         private ComputeGrid<Color> glowGrid;
         private ComputeGrid<GlowerSource> glowSources;
         private RenderTexture renderTextureShader;
-        private RenderTexture renderTextureIngame;
+        private RenderTexture _lightingLayer;
 
         public static Material renderMaterial;
 

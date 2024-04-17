@@ -35,10 +35,6 @@
 		<PackageReference Include="Lib.Harmony" Version="*" ExcludeAssets="runtime" />
 
 		<PackageReference Include="Microsoft.NETCore.Platforms" Version="*" />
-
-		<PackageReference Include="TeleCore" Version="1.9.8.4">
-			<ExcludeAssets>runtime</ExcludeAssets>
-		</PackageReference>
 	</ItemGroup>
 	
 	<ItemGroup>
