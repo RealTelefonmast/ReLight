@@ -1,4 +1,6 @@
-﻿using System.Runtime.Remoting.Messaging;
+﻿using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
+using Unity.Mathematics;
 using UnityEngine;
 using Verse;
 
@@ -6,18 +8,44 @@ namespace ReLight;
 
 public static class RelightUtils
 {
+    private static Dictionary<CellRect, Texture2D> _sectionTextures = new Dictionary<CellRect, Texture2D>();
+    
     public static RelightSettings Settings => RelightMod.Mod.Settings;
+    
+    public static int TileShadingPixels => Settings.PixelsPerTile;
     
     public static RenderTexture GenerateRenderTextureFor(Map map)
     {
-        //Fetch Mod Settings
-        
-        //
-        var pixelWidth = map.Size.x * RelightSettings.TileShadingPixels;
-        var pixelHeight = map.Size.z * RelightSettings.TileShadingPixels;
+        var pixelWidth = map.Size.x * TileShadingPixels;
+        var pixelHeight = map.Size.z * TileShadingPixels;
         var rt = new RenderTexture(pixelWidth, pixelHeight,  0, RenderTextureFormat.ARGB32);
         rt.enableRandomWrite = true;
         rt.Create();
         return rt;
+    }
+
+    public static void GetUVDataFor(Section section, out Vector2 offset, out Vector2 scale)
+    {
+        var ms = section.map.Size;
+        var mps = new Vector2(ms.x * TileShadingPixels, ms.y * TileShadingPixels);
+        var sps = new Vector2(section.bounds.Width * TileShadingPixels, section.bounds.Height * TileShadingPixels);
+        offset = new Vector2(section.botLeft.x * TileShadingPixels / mps.x, section.botLeft.y * TileShadingPixels / mps.y);
+        scale = new Vector2(sps.x / mps.x, sps.y / mps.y);
+    }
+
+    public static Texture2D GetTextureForSection(Section section)
+    {
+        if (_sectionTextures.TryGetValue(section.bounds, out var tex))
+        {
+            return tex;
+        }
+        tex = new Texture2D(section.bounds.Width * TileShadingPixels, section.bounds.Height * TileShadingPixels);
+        _sectionTextures[section.bounds] = tex;
+        return tex;
+    }
+
+    public static int2 MapPixelSize(IntVec3 mapSize)
+    {
+        return new int2(mapSize.x * TileShadingPixels, mapSize.z * TileShadingPixels);
     }
 }

@@ -3,36 +3,38 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using RimWorld.Planet;
 using UnityEngine;
 using Verse;
 
-namespace ReLight
+namespace ReLight;
+
+public class SectionLayer_GPULightingOverlay : SectionLayer
 {
-    public class SectionLayer_GPULightingOverlay : SectionLayer
+    private RenderTexture _mapRT;
+    private Mesh mesh;
+    private Material _secMat;
+
+    public SectionLayer_GPULightingOverlay(Section section) : base(section)
     {
-        private RenderTexture _mapRT;
-        private Material _secMat;
-        
-        public SectionLayer_GPULightingOverlay(Section section) : base(section)
-        {
-            _mapRT = LightingLayers.GetFor(base.section.map);
+        _mapRT = LightingLayers.GetFor(base.section.map);
+        _secMat = new Material(RelightDefOf.RelightLightMapCutout.Shader);
             
-            Shader shader = ;
-            _secMat = new Material(shader);
-            _secMat.SetTexture("_MainTex", _mapRT);
-            _secMat.SetTextureOffset("_MainTex", new Vector2(0, 0));
-            _secMat.SetTextureScale("_MainTex", new Vector2(1, 1));
-        }
+        _secMat.SetTexture(RelightShaderProps.MainTex, RelightUtils.GetTextureForSection(section));
+        _secMat.SetTexture(RelightShaderProps.LightMapTextureId, _mapRT);
+        RelightUtils.GetUVDataFor(section, out var offset, out var scale);
+        _secMat.SetTextureOffset(RelightShaderProps.LightMapTextureId, offset);
+        _secMat.SetTextureScale(RelightShaderProps.LightMapTextureId, scale);
+    }
 
-        public override void Regenerate()
-        {
-            var submesh = GetSubMesh(_secMat);
-            this.subMeshes.Add(submesh);
-        }
+    public override void Regenerate()
+    {
+        mesh = GetSubMesh(_secMat).mesh;
+    }
 
-        public override void DrawLayer()
-        {
-            base.DrawLayer();
-        }
+    public override void DrawLayer()
+    {
+        if (!Visible) return;
+        Graphics.DrawMesh(mesh, Matrix4x4.identity, _secMat, 0);
     }
 }

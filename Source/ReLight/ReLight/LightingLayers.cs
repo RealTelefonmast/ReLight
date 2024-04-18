@@ -27,6 +27,11 @@ internal static class LightingLayers
     
     internal static void Notify_Dispose()
     {
+        foreach (var rt in _globaleRTs.Values)
+        {
+            rt.Release();
+            UnityEngine.Object.Destroy(rt);
+        }
         _globaleRTs.Clear();
     }
 }
