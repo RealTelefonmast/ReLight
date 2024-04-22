@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
 
+/*
 namespace ReLight
 {
     public struct GlowerSource2
@@ -148,3 +149,4 @@ namespace ReLight
         
     }
 }
+*/

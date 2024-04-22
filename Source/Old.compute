@@ -15,6 +15,12 @@ struct GlowerSource
     float4 color;
 };
 
+struct Rect
+{
+    float2 min;
+    float2 max;
+};
+
 RWTexture2D<float4> _LightMap;
 
 //Final
@@ -137,45 +143,10 @@ float4 SetGlowAt(uint3 cell, uint index)
     return glowGrid[index]; 
 }
 
-// [numthreads(16,16,1)]
-// void CSMain (uint3 id : SV_DispatchThreadID)
-// {
-//     glowGrid[id.x] = 0;
-//     Result[id.xy] = SetGlowAt(IndexToCell(id.x), id.x);
-//     return;
-// }
-
-
-[numthreads(32,32,1)]
-void LightMap16 (uint3 id : SV_DispatchThreadID)
+[numthreads(16,16,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    uint2 pixelPos = id.xy;
-    uint2 tilePos = pixelPos / 32;
-    //id is the global thread id, so it represents a single pixel in this case (tile.xy * thready.xy)
-
-    float4 colorRes = float4(0,0,0,0);
-    
-    //Calculate the light intensity considering all glow sources for the color
-    // for(int i = 0; i < glowSourceCount; i++)
-    // {
-    //     GlowerSource source = glowSources[i];
-    //     if(!source.active) continue;
-    //     uint3 sourcePos = IndexToCell(source.index);
-    //     
-    //     float2 toLight = source. - worldPosition;
-    // }
-
-    if(useDebugMouse)
-    {
-        const float2 toMouse = debugMousePos - pixelPos;
-        const float dist = length(toMouse);
-        const float radius = 5*32;
-        if(dist <= radius)
-        {
-            const float attenuation = 1.0 - saturate(dist / radius);
-            colorRes += float4(1,1,1,1) * attenuation;
-        }
-    }
-
-    _LightMap[pixelPos] = colorRes;
+    glowGrid[id.x] = 0;
+    Result[id.xy] = SetGlowAt(IndexToCell(id.x), id.x);
+    return;
 }

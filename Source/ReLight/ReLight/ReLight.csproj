@@ -22,6 +22,12 @@
 		<WarningLevel>4</WarningLevel>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>full</DebugType>
+	</PropertyGroup>
+
+	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+	  <DebugType>full</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -35,6 +41,8 @@
 		<PackageReference Include="Lib.Harmony" Version="*" ExcludeAssets="runtime" />
 
 		<PackageReference Include="Microsoft.NETCore.Platforms" Version="*" />
+
+		<PackageReference Include="TeleCore" Version="1.9.8.5" />
 	</ItemGroup>
 	
 	<ItemGroup>

@@ -1,0 +1,134 @@
+﻿#pragma kernel CSMain
+#include "Relight.cginc"
+#include "UnityCG.cginc"
+
+//
+RWTexture2D<float4> _LightMap;
+
+//Map Data
+uint2 MAP_SIZE;
+uint MAP_INDICES;
+uint PIXEL_FACTOR;
+
+//SkyColor Set
+float4 SkyColor_Sky;
+float4 SkyColor_Shadow;
+float4 SkyColor_Overlay;
+float SkyColor_Saturation;
+
+RWStructuredBuffer<GlowSource> _GlowSources;
+RWStructuredBuffer<LightBlocker> _Blockers;
+
+//
+bool useDebugMouse;
+float3 debugMousePos;
+
+bool IsIntersecting(float2 a, float2 b, float2 c, float2 d)
+{
+    float denominator = ((b.x - a.x) * (d.y - c.y)) - ((b.y - a.y) * (d.x - c.x));
+    float numerator1 = ((a.y - c.y) * (d.x - c.x)) - ((a.x - c.x) * (d.y - c.y));
+    float numerator2 = ((a.y - c.y) * (b.x - a.x)) - ((a.x - c.x) * (b.y - a.y));
+
+    // Detect coincident lines (has a problem, read below)
+    if (denominator == 0) return numerator1 == 0 && numerator2 == 0;
+    
+    float r = numerator1 / denominator;
+    float s = numerator2 / denominator;
+
+    return (r >= 0 && r <= 1) && (s >= 0 && s <= 1);
+}
+
+bool IsIntersectingRect(float2 a, float2 b, float2 rectMin, float2 rectMax)
+{
+    return IsIntersecting(a, b, rectMin, float2(rectMax.x, rectMin.y)) ||
+           IsIntersecting(a, b, rectMin, float2(rectMin.x, rectMax.y)) ||
+           IsIntersecting(a, b, rectMax, float2(rectMax.x, rectMin.y)) ||
+           IsIntersecting(a, b, rectMax, float2(rectMin.x, rectMax.y));
+}
+
+bool IsIntersectingBlockers(float2 a, float2 b)
+{
+    for (int i=0; i < 1000; i++)
+    {
+        LightBlocker blocker = _Blockers[i];
+        if(blocker.Min.x == 0 && blocker.Min.y == 0 && blocker.Max.x == 0 && blocker.Max.y == 0) continue;
+        if(IsIntersectingRect(a, b, blocker.Min, blocker.Max)) return true;
+    }
+    return false;
+}
+
+void DrawLight(float2 pos, float2 pixelPos, float oscillatingVar, float4 color, inout float4 colorRes)
+{
+    const float2 toMouse = pos - pixelPos;
+        
+    const float dist = length(toMouse);
+    const float radius = (5 + (oscillatingVar * 10)) * 32;
+    if(dist <= radius)
+    {
+        const float attenuation = 1 - saturate(dist / radius);
+        colorRes.xyz += (color.xyz * attenuation);
+    }
+}
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    uint2 pixelPos = id.xy;
+    uint2 tilePos = floor(pixelPos / 32);
+    uint2 mouseTilePos = floor(debugMousePos.xz / 32);
+    //id is the global thread id, so it represents a single pixel in this case (tile.xy * thready.xy)
+    
+    float4 colorRes = SkyColor_Sky;
+    
+    //Calculate the light intensity considering all glow sources for the color
+    // for(int i = 0; i < glowSourceCount; i++)
+    // {
+    //     GlowerSource source = glowSources[i];
+    //     if(!source.active) continue;
+    //     uint3 sourcePos = IndexToCell(source.index);
+    //     
+    //     float2 toLight = source. - worldPosition;
+    // }
+
+    //Blocked from tile pos (35, 35) to tile pos (40, 35)
+    float sinTime = _SinTime.w;
+    float oscillatingVar = (sinTime + 1) * 0.5;
+    
+    if(useDebugMouse)
+    {
+        float time = _Time.y;
+
+        float r = cos(time) * 0.5 + 0.5;
+        float g = cos(time + 2.0f * 3.1416f / 3.0f) * 0.5 + 0.5;
+        float b = cos(time - 2.0f * 3.1416f / 3.0f) * 0.5 + 0.5;
+
+        float r2 = 1.0f - r;
+        float g2 = 1.0f - g;
+        float b2 = 1.0f - b;
+        
+        float4 color = float4(r, g, b, 1.0);
+        float4 color2 = float4(r2, g2, b2, 1.0);
+
+        float2 mouseOne = float2(debugMousePos.xz);
+        DrawLight(mouseOne, pixelPos, oscillatingVar, color, colorRes);
+    }
+
+    int tileIndex = tilePos.x + tilePos.y * MAP_SIZE.x;
+    float time = fmod(_Time.y, 10.0); 
+    int mappedValue = floor((time / 10) * MAP_INDICES);  // map to range 0 - maxValue
+
+    // Convert to Hue value and then use it to get full HSL color
+    time *= 2.0f * 3.14159f; // Convert time to radial for cosine function
+                
+    // Generate RGB using shifted cosine waves
+    float r = cos(time) * 0.5 + 0.5;
+    float g = cos(time + 2.0f * 3.14159f / 3.0f) * 0.5 + 0.5;
+    float b = cos(time + 4.0f * 3.14159f / 3.0f) * 0.5 + 0.5;
+
+    if(tileIndex == mappedValue)
+    {
+        colorRes = float4(r, g, b, time/10);
+    }
+
+    _LightMap[pixelPos] = colorRes;
+}

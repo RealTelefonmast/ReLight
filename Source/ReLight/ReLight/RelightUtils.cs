@@ -27,9 +27,9 @@ public static class RelightUtils
     public static void GetUVDataFor(Section section, out Vector2 offset, out Vector2 scale)
     {
         var ms = section.map.Size;
-        var mps = new Vector2(ms.x * TileShadingPixels, ms.y * TileShadingPixels);
-        var sps = new Vector2(section.bounds.Width * TileShadingPixels, section.bounds.Height * TileShadingPixels);
-        offset = new Vector2(section.botLeft.x * TileShadingPixels / mps.x, section.botLeft.y * TileShadingPixels / mps.y);
+        var mps = new Vector2(ms.x * TileShadingPixels, ms.z * TileShadingPixels);
+        var sps = new Vector2(section.CellRect.Width * TileShadingPixels, section.CellRect.Height * TileShadingPixels);
+        offset = new Vector2(section.botLeft.x * TileShadingPixels / mps.x, section.botLeft.z * TileShadingPixels / mps.y);
         scale = new Vector2(sps.x / mps.x, sps.y / mps.y);
     }
 
@@ -39,8 +39,10 @@ public static class RelightUtils
         {
             return tex;
         }
-        tex = new Texture2D(section.bounds.Width * TileShadingPixels, section.bounds.Height * TileShadingPixels);
+        tex = new Texture2D(section.CellRect.Width * TileShadingPixels, section.CellRect.Height * TileShadingPixels, TextureFormat.ARGB32, false);
+        tex.filterMode = FilterMode.Trilinear;
         _sectionTextures[section.bounds] = tex;
+        tex.Apply();
         return tex;
     }
 

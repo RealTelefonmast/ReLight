@@ -1,9 +1,11 @@
-﻿using Verse;
+﻿using HarmonyLib;
+using Verse;
 
 namespace ReLight;
 
 public class RelightMod : Mod
 {
+    private static Harmony relight;
     public static RelightMod Mod { get; private set; }
     public RelightSettings Settings => (RelightSettings)modSettings;
     
@@ -11,6 +13,9 @@ public class RelightMod : Mod
     {
         Mod = this;
         modSettings = new RelightSettings();
+        relight = new Harmony("telefonmast.relight");
+        relight.PatchAll();
+        
     }
 }
 
